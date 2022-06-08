@@ -1,0 +1,41 @@
+{
+  "name": "orbitdb-dashboard",
+  "version": "1.0.0",
+  "description": "<h1 align=\"center\">Dashboard for Smart Meter Data in Orbit-DB</h1>",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "NODE_ENV=development node server/index.js",
+    "build": "cd client && npm install && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stallingerl/orbitdb-dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/stallingerl/orbitdb-dashboard/issues"
+  },
+  "homepage": "https://github.com/stallingerl/orbitdb-dashboard#readme",
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "ipfs": "^0.62.3",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.3.4",
+    "orbit-db": "^0.28.6",
+    "path": "^0.12.7",
+    "serve-favicon": "^2.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.16"
+  },
+  "engines": {
+    "node": "16.14.0"
+  }
+}
