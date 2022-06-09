@@ -1,27 +1,34 @@
-require("dotenv").config();
-require("./config/database").connect();
-const bcrypt = require("bcrypt")
-const express = require("express");
-const path = require("path")
-const jsonwebtoken = require("jsonwebtoken")
-const auth = require("./middleware/auth");
-var favicon = require('serve-favicon')
+import { createRequire } from "module"; // Bring in the ability to create the 'require' method
+const require = createRequire(import.meta.url); // construct the require method
+import 'dotenv/config'
+import { connect } from "./config/database.js"
+connect()
+import bcrypt from "bcrypt"
+import express from "express"
+import path from "path"
+const __dirname = path.resolve('./');
+import jsonwebtoken from "jsonwebtoken"
+import auth from "./middleware/auth.js";
+import favicon from 'serve-favicon'
+import sha256 from 'sha256'
+import { s } from "./doichain/sharedState.js"
+import { createAndSendTransaction } from "doichainjs-lib"
 
 const app = express();
 
 app.use(express.json());
 
 // importing user context
-const User = require("./model/user");
+import { User } from "./model/user.js";
 
 // Have Node serve the files for our built React app
 //app.use(express.static(path.resolve(__dirname, '../client/build')));
-let x = path.join(__dirname, "../client/build")
-app.use(express.static(path.join(__dirname, "../client/build")))
+let x = path.join(__dirname, "./client/build")
+app.use(express.static(path.join(__dirname, "./client/build")))
 
-let y = path.join(__dirname, "../client/build/index.html")
+let y = path.join(__dirname, "./client/build/index.html")
 
-app.get(favicon(path.join(__dirname, '../client/public', 'favicon.ico')))
+app.get(favicon(path.join(__dirname, './client/public', 'favicon.ico')))
 
 app.get("/table", auth, async (req, res) => {
 
@@ -54,10 +61,36 @@ app.get("/table", auth, async (req, res) => {
 
 app.get("/trade", auth, async (req, res) => {
     var docstore = app.get('docstore')
+    var ipfs = app.get('ipfs')
 
     try {
         // Get user input
         const { producer, consumer, energy, booking_id, mfa_id } = req.body;
+        let stringMfa = JSON.stringify(req.body)
+        // Save Mfa to IPFS
+        var cid = await ipfs.add(stringMfa)
+        await ipfs.pin.add(cid, true)
+
+        let hash = sha256(stringMfa)
+
+        // Save Mfa and Cid to Doichain
+        let nameId = cid
+        let nameValue = hash
+        let amount
+        let decryptedSeedPhrase = s.seed
+        let destAddress
+        let our_wallet = s.wallet
+
+        // Check if there are still enough Doi in the wallet for the name tx
+        //await checkBalance(global.url);
+        const txResponse = await createAndSendTransaction(decryptedSeedPhrase,
+            s.password,
+            amount,
+            destAddress,
+            our_wallet,
+            nameId,
+            nameValue)
+        console.log("txResponse", txResponse)
 
         // Validate user input
         if (!(producer && consumer && energy && mfa_id)) {
@@ -82,7 +115,9 @@ app.get("/trade", auth, async (req, res) => {
                 "consumer": encryptedConsMeterId,
                 "date": energy.date, // sanitize: convert email to lowercase
                 "energy": energy.energy_kwh,
-                "_id": mfa_id
+                "_id": mfa_id,
+                "cid": cid,
+                "doi_hash": doi_hash
             });
 
             console.log("Successfully saved: ", mfa_id)
@@ -241,4 +276,4 @@ app.get("*", (req, res) => {
 
 })
 
-module.exports = app;
+export default app;

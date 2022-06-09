@@ -8,6 +8,7 @@
 /.pnp
 .pnp.js
 package-lock.json
+encrypted*
 
 # testing
 /coverage
