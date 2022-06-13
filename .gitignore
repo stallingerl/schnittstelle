@@ -9,6 +9,7 @@
 .pnp.js
 package-lock.json
 encrypted*
+/derivationPaths
 
 # testing
 /coverage

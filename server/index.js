@@ -27,6 +27,7 @@ async function main() {
 
   // To Do create ElectrumX connection to store Data in Doichain
   global.DEFAULT_NETWORK = network.DOICHAIN_REGTEST
+  // with regtest start doichaind with -acceptnonstdtxn
 
   let o_options
 

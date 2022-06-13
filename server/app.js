@@ -14,6 +14,7 @@ import sha256 from 'sha256'
 import { s } from "./doichain/sharedState.js"
 import { createAndSendTransaction } from "doichainjs-lib"
 
+
 const app = express();
 
 app.use(express.json());
@@ -59,7 +60,7 @@ app.get("/table", auth, async (req, res) => {
 
 });
 
-app.get("/trade", auth, async (req, res) => {
+app.post("/trade", auth, async (req, res) => {
     var docstore = app.get('docstore')
     var ipfs = app.get('ipfs')
 
@@ -69,6 +70,7 @@ app.get("/trade", auth, async (req, res) => {
         let stringMfa = JSON.stringify(req.body)
         // Save Mfa to IPFS
         var cid = await ipfs.add(stringMfa)
+        cid = cid.path
         await ipfs.pin.add(cid, true)
 
         let hash = sha256(stringMfa)
@@ -78,7 +80,8 @@ app.get("/trade", auth, async (req, res) => {
         let nameValue = hash
         let amount
         let decryptedSeedPhrase = s.seed
-        let destAddress
+        let destAddress = s.wallet.addresses[0].address
+
         let our_wallet = s.wallet
 
         // Check if there are still enough Doi in the wallet for the name tx
@@ -89,7 +92,8 @@ app.get("/trade", auth, async (req, res) => {
             destAddress,
             our_wallet,
             nameId,
-            nameValue)
+            nameValue,
+            s.addrType)
         console.log("txResponse", txResponse)
 
         // Validate user input
@@ -106,18 +110,17 @@ app.get("/trade", auth, async (req, res) => {
             res.status(200).send("OK saved Trade to Blockchain")
         } else {
             //Encrypt meter ids
-            encryptedProdMeterId = await bcrypt.hash(producer.meter_id, 10);
-            encryptedConsMeterId = await bcrypt.hash(consumer.meter_id, 10);
+            let encryptedProdMeterId = await bcrypt.hash(producer.meter_id, 10);
+            let encryptedConsMeterId = await bcrypt.hash(consumer.meter_id, 10);
 
             // Create user in our database
             await docstore.put({
                 "producer": encryptedProdMeterId,
                 "consumer": encryptedConsMeterId,
-                "date": energy.date, // sanitize: convert email to lowercase
-                "energy": energy.energy_kwh,
+                "energy": energy,
                 "_id": mfa_id,
                 "cid": cid,
-                "doi_hash": doi_hash
+                "doi_hash": hash
             });
 
             console.log("Successfully saved: ", mfa_id)
