@@ -151,11 +151,12 @@ app.post("/register", async (req, res) => {
         const oldUser = await User.findOne({ email });
 
         if (oldUser) {
-            return res.status(409).send("User Already Exist. Please Login");
+            // Create user in our database
+            return res.status(409).send("User Already Exists. Please Login");
         }
 
         //Encrypt user password
-        encryptedPassword = await bcrypt.hash(password, 10);
+        let encryptedPassword = await bcrypt.hash(password, 10);
 
         // Create user in our database
         const user = await User.create({
@@ -177,7 +178,7 @@ app.post("/register", async (req, res) => {
         user.token = token;
 
         // return new user
-        res.status(201).json(user);
+        res.status(200).json({"token":user});
     } catch (err) {
         console.log(err);
     }
@@ -212,7 +213,7 @@ app.post("/login", async (req, res) => {
             user.token = token;
 
             // user
-            res.status(200).json(user);
+            res.status(200).json(user.token);
         } else {
             res.status(400).send("Invalid Credentials");
         }

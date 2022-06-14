@@ -8,4 +8,4 @@ const userSchema = new mongoose.Schema({
   token: { type: String },
 });
 
-export const User = ( 'User', userSchema);
+export const User = mongoose.model( 'User', userSchema);
