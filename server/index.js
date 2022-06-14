@@ -25,15 +25,16 @@ async function main() {
     console.log(`Server listening on ${PORT}`);
   });
 
+  
   // To Do create ElectrumX connection to store Data in Doichain
-  global.DEFAULT_NETWORK = network.DOICHAIN_REGTEST
+  global.DEFAULT_NETWORK = network[process.env.DEFAULT_NETWORK]
   // with regtest start doichaind with -acceptnonstdtxn
 
   let o_options
 
   // check if seed file is available
 
-  s.addrType = "p2wpkh"
+  s.addrType = process.env.ADDRESS_TYPE
 
   switch (s.addrType) {
     case "p2pkh":
@@ -51,7 +52,7 @@ async function main() {
   s.account = 0
   s.basePath = `${s.purpose}/${s.coinType}/${s.account}`
 
-  global.client = new ElectrumClient("172.22.0.6", 50002, "ssl");
+  global.client = new ElectrumClient(process.env.ELECTRUM_CLIENT, 50002, "ssl");
   try {
     await global.client.connect(
       "electrum-client-js", // optional client name
