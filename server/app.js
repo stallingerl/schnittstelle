@@ -67,34 +67,6 @@ app.post("/trade", auth, async (req, res) => {
     try {
         // Get user input
         const { producer, consumer, energy, booking_id, mfa_id } = req.body;
-        let stringMfa = JSON.stringify(req.body)
-        // Save Mfa to IPFS
-        var cid = await ipfs.add(stringMfa)
-        cid = cid.path
-        await ipfs.pin.add(cid, true)
-
-        let hash = sha256(stringMfa)
-
-        // Save Mfa and Cid to Doichain
-        let nameId = cid
-        let nameValue = hash
-        let amount
-        let decryptedSeedPhrase = s.seed
-        let destAddress = s.wallet.addresses[0].address
-
-        let our_wallet = s.wallet
-
-        // Check if there are still enough Doi in the wallet for the name tx
-        //await checkBalance(global.url);
-        const txResponse = await createAndSendTransaction(decryptedSeedPhrase,
-            s.password,
-            amount,
-            destAddress,
-            our_wallet,
-            nameId,
-            nameValue,
-            s.addrType)
-        console.log("txResponse", txResponse)
 
         // Validate user input
         if (!(producer && consumer && energy && mfa_id)) {
@@ -109,6 +81,36 @@ app.post("/trade", auth, async (req, res) => {
             // return ok
             res.status(200).send("OK saved Trade to Blockchain")
         } else {
+            
+            let stringMfa = JSON.stringify(req.body)
+            // Save Mfa to IPFS
+            var cid = await ipfs.add(stringMfa)
+            cid = cid.path
+            await ipfs.pin.add(cid, true)
+    
+            let hash = sha256(stringMfa)
+    
+            // Save Mfa and Cid to Doichain
+            let nameId = cid
+            let nameValue = hash
+            let amount
+            let decryptedSeedPhrase = s.seed
+            let destAddress = s.wallet.addresses[0].address
+    
+            let our_wallet = s.wallet
+    
+            // Check if there are still enough Doi in the wallet for the name tx
+            //await checkBalance(global.url);
+            const txResponse = await createAndSendTransaction(decryptedSeedPhrase,
+                s.password,
+                amount,
+                destAddress,
+                our_wallet,
+                nameId,
+                nameValue,
+                s.addrType)
+            console.log("txResponse", txResponse)
+
             //Encrypt meter ids
             let encryptedProdMeterId = await bcrypt.hash(producer.meter_id, 10);
             let encryptedConsMeterId = await bcrypt.hash(consumer.meter_id, 10);
