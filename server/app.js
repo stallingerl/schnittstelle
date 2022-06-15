@@ -79,7 +79,7 @@ app.post("/trade", auth, async (req, res) => {
         if (oldMfa.length > 0) {
             console.log("Mfa already saved")
             // return ok
-            res.status(200).send("OK saved Trade to Blockchain")
+            res.status(200).send(mfa_id)
         } else {
             
             let stringMfa = JSON.stringify(req.body)
@@ -127,7 +127,7 @@ app.post("/trade", auth, async (req, res) => {
 
             console.log("Successfully saved: ", mfa_id)
             // return ok
-            res.status(200).send("OK saved Trade to Blockchain")
+            res.status(200).send(mfa_id)
         }
     } catch (err) {
         console.log(err);
@@ -180,7 +180,7 @@ app.post("/register", async (req, res) => {
         user.token = token;
 
         // return new user
-        res.status(200).json({"token":user});
+        res.status(200).send(token);
     } catch (err) {
         console.log(err);
     }
@@ -212,10 +212,9 @@ app.post("/login", async (req, res) => {
             );
 
             // save user token
-            user.token = token;
+            user.token =  token
 
-            // user
-            res.status(200).json(user.token);
+            res.status(200).send(token);
         } else {
             res.status(400).send("Invalid Credentials");
         }
