@@ -2,6 +2,7 @@
 import app from "./app.js";
 const HTTP_PORT = process.env.HTTP_PORT || 3001;
 const HTTPS_PORT = process.env.HTTPS_PORT || 8001;
+const HOST = process.env.HOST || "localhost"
 import * as IPFS from 'ipfs';
 import https from "https"
 import http from "http"
@@ -33,7 +34,7 @@ async function main() {
   };
 
   http.createServer(app).listen(HTTP_PORT);
-  https.createServer(options, app).listen(HTTPS_PORT);
+  https.createServer(options, app).listen(HTTPS_PORT, HOST);
 
   console.log(`HTTP Server listening on ${HTTP_PORT}`);
   console.log(`HTTPS Server listening on ${HTTPS_PORT}`);
