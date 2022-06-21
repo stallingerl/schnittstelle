@@ -22,7 +22,11 @@ If the production and consumption of the ordered electricity has taken place, a 
 
 ## Deployed at
 
-<a href="https://orbitdb-dashboard.herokuapp.com">OrbitDB Dashboard</a>
+<a href="https://interface.blockpro.energy">OrbitDB Dashboard</a>
+
+Interface: 
+
+https://interface.blockpro.energy
 
 ## Get Started
 

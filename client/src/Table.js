@@ -8,9 +8,12 @@ const Table = (props) => {
   // LOOP OVER DATA AND ASSIGN PER COLUMN
   data = {
     col0: props.data._id,
-    col1: props.data.timestamp,
-    col2: props.data.energy,
-    col3: props.data.pin
+    col1: props.data.consumer,
+    col2: props.data.producer,
+    col3: props.data.cid,
+    col4: props.data.doi_hash,
+    col5: props.data.energy[0].date,
+    col6: props.data.energy[0].energy_kwh
   }
 
 

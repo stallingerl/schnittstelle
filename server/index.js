@@ -1,20 +1,15 @@
 // server/index.js
 import app from "./app.js";
 const HTTP_PORT = process.env.HTTP_PORT || 3001;
-const HTTPS_PORT = process.env.HTTPS_PORT || 8001;
-const HOST = process.env.HOST || "localhost"
 import * as IPFS from 'ipfs';
-import https from "https"
 import http from "http"
 import OrbitDB from 'orbit-db';
 import { s } from "./doichain/sharedState.js";
 import { createOrReadSeed } from "./doichain/createOrReadSeed.js";
 import { network, createNewWallet } from "doichainjs-lib"
 import ElectrumClient from "@codewarriorr/electrum-client-js"
-import fs from 'fs';
-import path from "path"
-const __dirname = path.resolve('./');
 import bootstrapers from './config/bootstrapers.js'
+
 
 async function main() {
 
@@ -26,20 +21,9 @@ async function main() {
 
   s.id = id.id
 
-  var key = fs.readFileSync(__dirname + '/certs/selfsigned.key');
-  var cert = fs.readFileSync(__dirname + '/certs/selfsigned.crt');
-  var options = {
-    key: key,
-    cert: cert
-  };
-
-  const tcp = http.createServer(app).listen(HTTP_PORT, HOST);
-  const ssl = https.createServer(options, app).listen(HTTPS_PORT, HOST);
-  console.log("ssl ", ssl)
-
-  console.log(`HTTP Server listening on ${HTTP_PORT}`);
-  console.log(`HTTPS Server listening on ${HTTPS_PORT}`);
-
+  http.createServer(app).listen(HTTP_PORT);
+  console.log("Server listening at: https://interface.blockpro.energy" )
+ 
 
   // To Do create ElectrumX connection to store Data in Doichain
   global.DEFAULT_NETWORK = network[process.env.DEFAULT_NETWORK]

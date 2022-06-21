@@ -1,12 +1,19 @@
 import React from 'react';
+import CryptoJS from 'crypto-js'
 
 const List = (props) => {
     let list = null;
     list = props.children
 
-    function convertTimestamp(timestamp){
+    function convertTimestamp(timestamp) {
         let date = new Date(timestamp);
         return date.toString();
+    }
+
+    function decryptItem(prosumer) {
+        let decrypted = CryptoJS.AES.decrypt(prosumer, "NeverGuessing")
+        decrypted = decrypted.toString(CryptoJS.enc.Utf8)
+        return decrypted
     }
 
     return (
@@ -14,18 +21,38 @@ const List = (props) => {
             <thead>
                 <tr>
                     <th scope="col">Trade ID</th>
-                    <th scope="col">Timestamp</th>
+                    <th scope="col">Consumer</th>
+                    <th scope="col">Producer</th>
                     <th scope="col">Energy</th>
-                    <th scope="col">Pin Status</th>
+                    <th scope="col">IPFS Path</th>
+                    <th scope="col">Doichain Hash</th>
                 </tr>
             </thead>
             <tbody>
                 {list.map(item => (
                     <tr>
                         <td>{item._id}</td>
-                        <td>{convertTimestamp(item.timestamp)}</td>
-                        <td>{item.energy}</td>
-                        <td>{item.pin ? "true" : "false"}</td>
+                        <td>{decryptItem(item.consumer)}</td>
+                        <td>{decryptItem(item.producer)}</td>
+                        <td>
+                            <table class="table">
+                                <thead>
+                                    <th>Date</th>
+                                    <th>kwH</th>
+                                </thead>
+                                <tbody>
+                                    {item.energy.map(entry => (
+                                        <tr>
+
+                                            <td>{entry.date}</td>
+                                            <td>{entry.energy_kwh}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </td>
+                        <td>{item.cid}</td>
+                        <td>{item.doi_hash}</td>
                     </tr>
                 ))}
             </tbody>

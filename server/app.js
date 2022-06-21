@@ -11,6 +11,7 @@ import favicon from 'serve-favicon'
 import sha256 from 'sha256'
 import { s } from "./doichain/sharedState.js"
 import { createAndSendTransaction } from "doichainjs-lib"
+import AES from 'crypto-js/aes.js'
 
 
 const app = express();
@@ -29,47 +30,32 @@ let y = path.join(__dirname, "./client/build/index.html")
 
 app.get(favicon(path.join(__dirname, './client/public', 'favicon.ico')))
 
-app.get("/table", auth, async (req, res) => {
+app.get("/table", async (req, res) => {
 
     var docstore = app.get('docstore')
 
-    // Set variables
-    const amount = 3; // Amout of data to put
-
-    console.log("Starting to put data into Docstore DB...");
-    console.log('This is middleware', req.originalUrl);
-
-    // Loop for our amount of data to put
-    /*for (let i = 0; i < amount; i++) {
-        // Pseudo ID from timestamp + index should be enough for testing
-        let pseudoId = new Date().getTime();
-
-        let timestamp = new Date().getTime();
-
-        // Random KWh values between 1.000 and 100.000
-        let kwhValue = Math.floor(Math.random() * 100000) + 1000;
-        await docstore.put({ _id: pseudoId, timestamp: timestamp, energy: kwhValue, pin: true })
-    }*/
-
-    var myMfas = await docstore.query((e) => e._id > 5)
+    var myMfas = await docstore.query((e) => e._id > 1)
     console.log("My Mfas", myMfas)
     res.json(myMfas)
     console.log("sent response")
 
 });
 
-app.post("/trade", auth, async (req, res) => {
+app.post("/trade", async (req, res) => {
     var docstore = app.get('docstore')
     var ipfs = app.get('ipfs')
 
     try {
         // Get user input
-        const { producer, consumer, energy, booking_id, mfa_id } = req.body;
+        var { producer, consumer, energy, booking_id, mfa_id } = req.body;
 
         // Validate user input
         if (!(producer && consumer && energy && mfa_id)) {
             res.status(400).send("All input is required");
         }
+
+        producer = AES.encrypt(producer.meter_id, "NeverGuessing").toString();
+        consumer = AES.encrypt(consumer.meter_id, "NeverGuessing").toString();
         // check if user already exist
         // Validate if user exist in our database
         const oldMfa = await docstore.query((doc) => doc._id == mfa_id)
@@ -80,7 +66,8 @@ app.post("/trade", auth, async (req, res) => {
             res.status(200).send(mfa_id)
         } else {
             
-            let stringMfa = JSON.stringify(req.body)
+            let stringMfa = JSON.stringify({ producer, consumer, energy, booking_id, mfa_id })
+            console.log("string mfa: ", stringMfa)
             // Save Mfa to IPFS
             var cid = await ipfs.add(stringMfa)
             cid = cid.path
@@ -109,14 +96,10 @@ app.post("/trade", auth, async (req, res) => {
                 s.addrType)
             console.log("txResponse", txResponse)
 
-            //Encrypt meter ids
-            let encryptedProdMeterId = await bcrypt.hash(producer.meter_id, 10);
-            let encryptedConsMeterId = await bcrypt.hash(consumer.meter_id, 10);
-
             // Create user in our database
             await docstore.put({
-                "producer": encryptedProdMeterId,
-                "consumer": encryptedConsMeterId,
+                "producer": producer,
+                "consumer": consumer,
                 "energy": energy,
                 "_id": mfa_id,
                 "cid": cid,
@@ -223,7 +206,7 @@ app.post("/login", async (req, res) => {
 
 app.get("*", (req, res) => {
     res.sendFile(
-        path.join(__dirname, "../client/build/index.html")
+        path.join(__dirname, "./client/build/index.html")
     );
 
     // Register

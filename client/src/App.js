@@ -35,7 +35,7 @@ function App() {
     return (
       <div className="App">
         <h1>Block Pro </h1>
-        <h2>My Saved Meter Data</h2>
+        <h2>Testbuchungen von EnergieDock</h2>
         <List>{list}</List>
       </div>
     )
