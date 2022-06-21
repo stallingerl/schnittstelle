@@ -33,8 +33,9 @@ async function main() {
     cert: cert
   };
 
-  http.createServer(app).listen(HTTP_PORT, HOST);
-  https.createServer(options, app).listen(HTTPS_PORT, HOST);
+  const tcp = http.createServer(app).listen(HTTP_PORT, HOST);
+  const ssl = https.createServer(options, app).listen(HTTPS_PORT, HOST);
+  console.log("ssl ", ssl)
 
   console.log(`HTTP Server listening on ${HTTP_PORT}`);
   console.log(`HTTPS Server listening on ${HTTPS_PORT}`);
