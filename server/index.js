@@ -105,6 +105,8 @@ async function main() {
   const docstore = await orbitDb.docstore("docstoreDB");
   console.log("Successfully created docstore");
 
+  console.log("address docstore ", docstore.address)
+
   await docstore.load()
 
   await docstore.events.on('replicated', () => console.log("Replicated Db"))
