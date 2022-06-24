@@ -12,6 +12,7 @@ import sha256 from 'sha256'
 import { s } from "./doichain/sharedState.js"
 import { createAndSendTransaction } from "doichainjs-lib"
 import AES from 'crypto-js/aes.js'
+const password = process.env.PASSWORD
 
 
 const app = express();
@@ -34,7 +35,7 @@ app.get("/table", async (req, res) => {
 
     var docstore = app.get('docstore')
 
-    var myMfas = await docstore.query((e) => e._id > 1)
+    var myMfas = await docstore.query((e) => e._id.length > 0)
     console.log("My Mfas", myMfas)
     res.json(myMfas)
     console.log("sent response")
@@ -54,8 +55,8 @@ app.post("/trade", async (req, res) => {
             res.status(400).send("All input is required");
         }
 
-        producer = AES.encrypt(producer.meter_id, "NeverGuessing").toString();
-        consumer = AES.encrypt(consumer.meter_id, "NeverGuessing").toString();
+        producer = AES.encrypt(producer.meter_id, password).toString();
+        consumer = AES.encrypt(consumer.meter_id, password).toString();
         // check if user already exist
         // Validate if user exist in our database
         const oldMfa = await docstore.query((doc) => doc._id == mfa_id)
@@ -102,6 +103,7 @@ app.post("/trade", async (req, res) => {
                 "consumer": consumer,
                 "energy": energy,
                 "_id": mfa_id,
+                "booking_id": booking_id,
                 "cid": cid,
                 "doi_hash": hash
             });

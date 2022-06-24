@@ -21,6 +21,7 @@ const List = (props) => {
             <thead>
                 <tr>
                     <th scope="col">Trade ID</th>
+                    <th scope="col">Booking ID</th>
                     <th scope="col">Consumer</th>
                     <th scope="col">Producer</th>
                     <th scope="col">Energy</th>
@@ -32,6 +33,7 @@ const List = (props) => {
                 {list.map(item => (
                     <tr>
                         <td>{item._id}</td>
+                        <td>{item.booking_id}</td>
                         <td>{decryptItem(item.consumer)}</td>
                         <td>{decryptItem(item.producer)}</td>
                         <td>
