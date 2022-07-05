@@ -35,14 +35,14 @@ app.get("/table", async (req, res) => {
 
     var docstore = app.get('docstore')
 
-    var myMfas = await docstore.query((e) => e._id.length > 0)
+    var myMfas = await docstore.query((e) => !e._id.startsWith("Qm"))
     console.log("My Mfas", myMfas)
     res.json(myMfas)
     console.log("sent response")
 
 });
 
-app.post("/trade", async (req, res) => {
+app.post("/trade", auth, async (req, res) => {
     var docstore = app.get('docstore')
     var ipfs = app.get('ipfs')
 
@@ -66,25 +66,25 @@ app.post("/trade", async (req, res) => {
             // return ok
             res.status(200).send(mfa_id)
         } else {
-            
+
             let stringMfa = JSON.stringify({ producer, consumer, energy, booking_id, mfa_id })
             console.log("string mfa: ", stringMfa)
             // Save Mfa to IPFS
             var cid = await ipfs.add(stringMfa)
             cid = cid.path
             await ipfs.pin.add(cid, true)
-    
+
             let hash = sha256(stringMfa)
-    
+
             // Save Mfa and Cid to Doichain
             let nameId = cid
             let nameValue = hash
             let amount
             let decryptedSeedPhrase = s.seed
             let destAddress = s.wallet.addresses[0].address
-    
+
             let our_wallet = s.wallet
-    
+
             // Check if there are still enough Doi in the wallet for the name tx
             //await checkBalance(global.url);
             const txResponse = await createAndSendTransaction(decryptedSeedPhrase,
@@ -188,14 +188,14 @@ app.post("/login", async (req, res) => {
             // Create token
             const token = jsonwebtoken.sign(
                 { user_id: user._id, email },
-                process.env.TOKEN_KEY
-                /* {
-                     expiresIn: "2h",
-                 } */
+                process.env.TOKEN_KEY,
+                {
+                    expiresIn: "2h",
+                }
             );
 
             // save user token
-            user.token =  token
+            user.token = token
 
             res.status(200).send(token);
         } else {

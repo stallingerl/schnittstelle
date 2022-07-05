@@ -9,7 +9,8 @@ import { createOrReadSeed } from "./doichain/createOrReadSeed.js";
 import { network, createNewWallet } from "doichainjs-lib"
 import ElectrumClient from "@codewarriorr/electrum-client-js"
 import bootstrapers from './config/bootstrapers.js'
-
+import { mapping } from "./doichain/mapping.js"
+import { sendReport } from "./doichain/reporting.js"
 
 async function main() {
 
@@ -22,8 +23,8 @@ async function main() {
   s.id = id.id
 
   http.createServer(app).listen(HTTP_PORT);
-  console.log("Server listening at: https://interface.blockpro.energy" )
- 
+  console.log("Server listening at: https://interface.blockpro.energy")
+
 
   // To Do create ElectrumX connection to store Data in Doichain
   global.DEFAULT_NETWORK = network[process.env.DEFAULT_NETWORK]
@@ -79,7 +80,7 @@ async function main() {
   const peers = await ipfs.swarm.peers()
   console.log(`The node now has ${peers.length} peers.`)
 
-  peers.forEach((connection)=>console.log(connection.peer)) 
+  peers.forEach((connection) => console.log(connection.peer))
 
   // Create IPFS instance
   //const ipfs = await IPFS.create();
@@ -87,9 +88,17 @@ async function main() {
   // Create OrbitDB instance
   const orbitDb = await OrbitDB.createInstance(ipfs, { directory: './orbitdb1' });
 
+
+  const options = {
+    // Give write access to everyone
+    accessController: {
+      write: ['*']
+    }
+  }
+
   // Create docstore DB
   // const address = '/orbitdb/zdpuArV8iyuGAanQs37r61HnREMExY9KnBmp2ZcxGj5iecsxo/docstoreDB'
-  const docstore = await orbitDb.docstore("docstoreDB");
+  const docstore = await orbitDb.docstore("docstoreDB", options);
   console.log("Successfully created docstore");
 
   console.log("address docstore ", docstore.address)
@@ -104,9 +113,13 @@ async function main() {
   app.set('docstore', docstore)
   app.set('ipfs', ipfs)
 
- /* setInterval(async () => {
-    console.log(`The node now has ${peers.length} peers.`)
-  }, 5000)*/
+  // Check for reportable meter data every minute
+  setInterval(async () => {
+    let foundMatchingMeterData = await mapping(docstore)
+    await sendReport(foundMatchingMeterData)
+  }, 60000)
+
+
 }
 
 main()
