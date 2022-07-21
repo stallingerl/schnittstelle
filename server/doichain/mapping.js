@@ -1,29 +1,15 @@
-
+import { s } from "./sharedState.js";
+import AES from 'crypto-js/aes.js'
 
 export async function mapping(docstore) {
 
-    let foundMatchingMeterData
+    let foundMatchingMeterData = []
+    let producerMeterIds = []
+    let consumerMeterIds = []
 
     // query meter data of last interval
     let timeNow = new Date().getTime();
     let timeBeforeInterval = timeNow - 3600000
-
-    let meterData = await docstore.query((e) => {
-        let data = []
-        if (e._id.startsWith("Qm"))
-        {
-            if (e.timestamp >= timeBeforeInterval && e.timestamp <= timeNow)
-            {
-            data.push(e)
-            }
-        }
-
-        if (data.length > 0){
-            return true
-        }else {
-            return false
-        }
-    })
 
     // query all booking data of last interval 
     let bookingData = await docstore.query((e) => {
@@ -31,25 +17,119 @@ export async function mapping(docstore) {
         if (!e._id.startsWith("Qm")) {
             for (let i = 0; i < e.energy.length; i++) {
                 let date = new Date(e.energy[i].date).getTime()
-                if (date >= timeBeforeInterval && date <= timeNow) {
-                    data.push(e)
-                }
+                //if (date >= timeBeforeInterval && date <= timeNow) {
+                data.push(e)
+                producerMeterIds.push(AES.decrypt(e.producer, process.env.PASSWORD))
+                consumerMeterIds.push(AES.decrypt(e.consumer, process.env.PASSWORD))
+                //}
             }
         }
-        if (data.length > 0){
+        if (data.length > 0) {
             return true
-        }else {
+        } else {
             return false
         }
     })
 
-    // check if booking data has matching meter data
+    // If there is bookingData in last Intervall find any producer and consumer meter data for the last intervall and 15 mins before
+    if (bookingData.length > 0) {
 
-    if (meterData.length > 0 && bookingData.length > 0){
+        let meterData = await docstore.query((e) => {
+            let data = []
+            if (e._id.startsWith("Qm")) /*
+                && (producerMeterIds.indexOf(e.meter_id) > -1) || (consumerMeterIds.indexOf(e.meter_id) > -1) 
+                && e.timestamp >= (timeBeforeInterval - 900000) 
+                && e.timestamp <= timeNow)*/
+                 {
+              
+                // {
+                data.push(e)
+                // }
+            }
+
+            if (data.length > 0) {
+                return true
+            } else {
+                return false
+            }
+        })
 
 
+       if (meterData.length > 0 && bookingData.length > 0) {
+            foundMatchingMeterData = calculateEnergyDifference(meterData, bookingData)
+
+        }
+    } else {
+        foundMatchingMeterData = []
     }
 
-
     return foundMatchingMeterData;
+}
+
+
+function calculateEnergyDifference(meterData, bookingData) {
+    let requestedPTUTimes = []
+
+
+    // transform dates in bookingData to timeStamps and overwrite
+    for (let i=0; i < bookingData.length; i++){
+        for (j=0; j < bookingData[i].energy.length; j++){
+            let timestamp = new Date(bookingData[i].energy[j].date).getTime()
+            bookingData[i].energy[j].date = timestamp 
+            requestedPTUTimes.push({timestamp})
+        }
+    }
+
+    // add 15 mins to last PTU to find meter data after last PTU and calculate produced/consumed electricity
+    requestedPTUTimes.sort()
+    let indexLastItem = requestedPTUTimes.length -1
+    const add15minsToLastPTU = (requestedPTUTimes[indexLastItem] + 900000)
+    requestedPTUTimes.push(add15minsToLastPTU)
+    requestedPTUTimes.sort()
+
+    // find all meter data for requested times 
+    let matchingETUs = []
+    let lastQuarterHourProduced 
+    let lastQuarterHourConsumed
+    let totalProduced
+    let totalConsumed
+
+    for (let i=0; i < requestedPTUTimes.length; i++){
+        for (j=0; j < meterData.length; j++){
+            if (requestedPTUTimes[i] == meterData.timestamp){
+
+                // calculate difference for consumed electricity
+                if (!lastQuarterHourConsumed){
+                    lastQuarterHourConsumed = meterData.total_consumed
+                }else {
+                    totalConsumed = meterData.total_consumed - lastQuarterHourConsumed
+                }
+
+                // calculate difference for produced electricity
+                if (!lastQuarterHourProduced){
+                    lastQuarterHourProduced = meterData.total_produced
+                }else {
+                    totalProduced = meterData.total_produced - lastQuarterHourProduced
+                }
+
+                matchingETUs.push({
+                    "meter_id": meterData.meter_id,
+                    "energy_consumed": totalConsumed,
+                    "energy_produced": totalProduced,
+                    "timestamp": requestedPTUTimes[i]
+                })
+
+            }
+        }
+    }
+
+    // Compare bookingData and matchingETUs: Was enough electricity consumed and produced? If yes return found match
+    // matchingETUs sollte zu jedem Timestamp zwei Zählerdaten haben producer und consumer zuzuordnen 
+    // matchingEtus iterieren und wenn timestamp mit timestamp von bookingData übereinstimmt, dann prüfen ob Zähler ein consument oder Produzent ist
+    // wenn produzent, dann muss energy_consumed gleich oder höher von energy sein 
+    // wenn konsument, dann muss energy_consumed gleich oder höher von energy sein 
+
+    
+
+    return foundMatchingMeterData
 }

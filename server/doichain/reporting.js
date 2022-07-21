@@ -9,31 +9,13 @@ export async function sendReport(foundMatchingMeterdata) {
         await getToken()
     }
 
-    const config = {
-        headers: { 'Authorization': `Bearer ${s.token}` }
-    };
 
-    const bodyParameters =             {
-        "booking_id": "5ce6682e3147b5fa02cf3efd",
-        "mfa_id": "5ce6682e3147b5fa02cf3efe",
-        "etus": [
-            {
-                "date": "2019-04-03T18:00:00",
-                "energy": 42.7
-            },
-            {
-                "date": "2019-04-03T18:15:00",
-                "energy": 85.7
-            }
-        ]
-    }
-
-    resStatus = await postReport(foundMatchingMeterdata, bodyParameters, config)
+    resStatus = await postReport(foundMatchingMeterdata)
 
     // If last token was expired, get new one and try again
     if (resStatus == 401) {
         await getToken()
-        resStatus = await postReport(foundMatchingMeterdata,  bodyParameters, config)
+        resStatus = await postReport(foundMatchingMeterdata)
     }
 
     if (resStatus == 200) {
@@ -44,14 +26,47 @@ export async function sendReport(foundMatchingMeterdata) {
 
 }
 
-async function postReport(foundMatchingMeterdata, bodyParameters, config) {
+async function postReport(foundMatchingMeterdata) {
     let resStatus
+    const body = {
+        "booking_id": "627bcf715cba23888483f879",
+        "mfa_id": "627bcf715cba23888483f878",
+        "etus": [
+            {
+                "date": "2022-05-12T00:00:00+00:00",
+                "energy": 10
+            },
+            {
+                "date": "2022-05-12T00:15:00+00:00",
+                "energy": 10
+            }
+        ]
+    }
+
     try {
-        await axios.post("https://backend.consolinno-test.nemospot.de/reports",
-            bodyParameters,
-            { headers: {"Authorization" : `Bearer ${s.token}`} }
-        )
-            .then(res => {
+        await axios({
+            method: 'POST',
+            headers: {"Access-Control-Allow-Headers" : "Content-Type,Authorization",
+            "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE",
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + s.token},
+            data: {
+                "booking_id": "627bcf715cba23888483f879",
+                "mfa_id": "627bcf715cba23888483f878",
+                "etus": [
+                    {
+                        "date": "2022-05-12T00:00:00+00:00",
+                        "energy": 10
+                    },
+                    {
+                        "date": "2022-05-12T00:15:00+00:00",
+                        "energy": 10
+                    }
+                ]
+            },
+            url: "https://backend.consolinno-test.nemospot.de/reports"
+        }).then(res => {
                 if (res.status == 200) {
                     console.log("Successfully sent report")
                     resStatus = 200
