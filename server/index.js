@@ -113,7 +113,7 @@ async function main() {
   app.set('docstore', docstore)
   app.set('ipfs', ipfs)
   let foundMatchingMeterData
-  await sendReport(foundMatchingMeterData)
+ // await sendReport(foundMatchingMeterData)
 
   // Check for reportable meter data every minute
   /*setInterval(async () => {
