@@ -33,29 +33,18 @@ export async function mapping(docstore) {
 
     // If there is bookingData in last Intervall find any producer and consumer meter data for the last intervall and 15 mins before
     if (bookingData.length > 0) {
+        let meterData = []
+        await docstore.query((e) => {
 
-        let meterData = await docstore.query((e) => {
-            let data = []
             if (e._id.startsWith("Qm")) /*
                 && (producerMeterIds.indexOf(e.meter_id) > -1) || (consumerMeterIds.indexOf(e.meter_id) > -1) 
                 && e.timestamp >= (timeBeforeInterval - 900000) 
-                && e.timestamp <= timeNow)*/
-                 {
-              
-                // {
-                data.push(e)
-                // }
-            }
-
-            if (data.length > 0) {
-                return true
-            } else {
-                return false
+                && e.timestamp <= timeNow)*/ {
+                meterData.push(e)
             }
         })
 
-
-       if (meterData.length > 0 && bookingData.length > 0) {
+        if (meterData.length > 0 && bookingData.length > 0) {
             foundMatchingMeterData = calculateEnergyDifference(meterData, bookingData)
 
         }
@@ -72,48 +61,48 @@ function calculateEnergyDifference(meterData, bookingData) {
 
 
     // transform dates in bookingData to timeStamps and overwrite
-    for (let i=0; i < bookingData.length; i++){
-        for (j=0; j < bookingData[i].energy.length; j++){
+    for (let i = 0; i < bookingData.length; i++) {
+        for (let j = 0; j < bookingData[i].energy.length; j++) {
             let timestamp = new Date(bookingData[i].energy[j].date).getTime()
-            bookingData[i].energy[j].date = timestamp 
-            requestedPTUTimes.push({timestamp})
+            bookingData[i].energy[j].date = timestamp
+            requestedPTUTimes.push({ timestamp })
         }
     }
 
     // add 15 mins to last PTU to find meter data after last PTU and calculate produced/consumed electricity
     requestedPTUTimes.sort()
-    let indexLastItem = requestedPTUTimes.length -1
+    let indexLastItem = requestedPTUTimes.length - 1
     const add15minsToLastPTU = (requestedPTUTimes[indexLastItem] + 900000)
     requestedPTUTimes.push(add15minsToLastPTU)
     requestedPTUTimes.sort()
 
     // find all meter data for requested times 
     let matchingETUs = []
-    let lastQuarterHourProduced 
+    let lastQuarterHourProduced
     let lastQuarterHourConsumed
     let totalProduced
     let totalConsumed
 
-    for (let i=0; i < requestedPTUTimes.length; i++){
-        for (j=0; j < meterData.length; j++){
-            if (requestedPTUTimes[i] == meterData.timestamp){
+    for (let i = 0; i < requestedPTUTimes.length; i++) {
+        for (let j = 0; j < meterData.length; j++) {
+            if (requestedPTUTimes[i] == meterData[j].timestamp) {
 
                 // calculate difference for consumed electricity
-                if (!lastQuarterHourConsumed){
-                    lastQuarterHourConsumed = meterData.total_consumed
-                }else {
-                    totalConsumed = meterData.total_consumed - lastQuarterHourConsumed
+                if (!lastQuarterHourConsumed) {
+                    lastQuarterHourConsumed = meterData[j].total_consumed
+                } else {
+                    totalConsumed = meterData[j].total_consumed - lastQuarterHourConsumed
                 }
 
                 // calculate difference for produced electricity
-                if (!lastQuarterHourProduced){
-                    lastQuarterHourProduced = meterData.total_produced
-                }else {
-                    totalProduced = meterData.total_produced - lastQuarterHourProduced
+                if (!lastQuarterHourProduced) {
+                    lastQuarterHourProduced = meterData[j].total_produced
+                } else {
+                    totalProduced = meterData[j].total_produced - lastQuarterHourProduced
                 }
 
                 matchingETUs.push({
-                    "meter_id": meterData.meter_id,
+                    "meter_id": meterData[j].meter_id,
                     "energy_consumed": totalConsumed,
                     "energy_produced": totalProduced,
                     "timestamp": requestedPTUTimes[i]
@@ -127,9 +116,25 @@ function calculateEnergyDifference(meterData, bookingData) {
     // matchingETUs sollte zu jedem Timestamp zwei Zählerdaten haben producer und consumer zuzuordnen 
     // matchingEtus iterieren und wenn timestamp mit timestamp von bookingData übereinstimmt, dann prüfen ob Zähler ein consument oder Produzent ist
     // wenn produzent, dann muss energy_consumed gleich oder höher von energy sein 
+    // wenn konsument, dann mustchingETUs sollte zu jedem Timestamp zwei Zählerdaten haben producer und consumer zuzuordnen 
+    // matchingEtus iterieren und wenn timestamp mit timestamp von bookingData übereinstimmt, dann prüfen ob Zähler ein consument oder Produzent ist
+    // wenn produzent, dann muss energy_consumed gleich oder höher von energy sein 
     // wenn konsument, dann muss energy_consumed gleich oder höher von energy sein 
+    let foundMatchingMeterData = []
 
-    
+    for (let i = 0; i < matchingETUs.length; i++) {
+        for (let j = 0; j < bookingData.length; j++) {
+            if (matchingETUs[i].meter_id == bookingData[j].energy.consumer) {
+                foundMatchingMeterData.push(
+                    {
+                        "booking_id": bookingData[j].booking_id,
+                        "mfa_id": bookingData[j]._id,
+                        "etus": matchingETUs[i]
+                    }
+                )
+            }
+        }
+    }
 
     return foundMatchingMeterData
 }
