@@ -85,7 +85,7 @@ function calculateEnergyDifference(meterData, bookingData) {
 
     for (let i = 0; i < requestedPTUTimes.length; i++) {
         for (let j = 0; j < meterData.length; j++) {
-            if (requestedPTUTimes[i] == meterData[j].timestamp) {
+            if (requestedPTUTimes[i].timestamp == meterData[j].timestamp) {
 
                 // calculate difference for consumed electricity
                 if (!lastQuarterHourConsumed) {
@@ -101,25 +101,25 @@ function calculateEnergyDifference(meterData, bookingData) {
                     totalProduced = meterData[j].total_produced - lastQuarterHourProduced
                 }
 
-                matchingETUs.push({
-                    "meter_id": meterData[j].meter_id,
-                    "energy_consumed": totalConsumed,
-                    "energy_produced": totalProduced,
-                    "timestamp": requestedPTUTimes[i]
-                })
+                if (totalProduced && totalConsumed) {
+                    var date = new Date(new Date(requestedPTUTimes[i].timestamp));
+                    date = (date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + "T" + date.getHours().toString().padStart(2, '0') + ":" + (date.getMinutes()<10?'0':'') + date.getMinutes()  + ":00" );
+                    matchingETUs.push({
+                        "meter_id": meterData[j].meterId,
+                        "etus": [
+                            {
+                                "date": date,
+                                "energy": totalConsumed
+                            }
+                        ],
+                        "timestamp": requestedPTUTimes[i].timestamp
+                    })
+                }
 
             }
         }
     }
 
-    // Compare bookingData and matchingETUs: Was enough electricity consumed and produced? If yes return found match
-    // matchingETUs sollte zu jedem Timestamp zwei Zählerdaten haben producer und consumer zuzuordnen 
-    // matchingEtus iterieren und wenn timestamp mit timestamp von bookingData übereinstimmt, dann prüfen ob Zähler ein consument oder Produzent ist
-    // wenn produzent, dann muss energy_consumed gleich oder höher von energy sein 
-    // wenn konsument, dann mustchingETUs sollte zu jedem Timestamp zwei Zählerdaten haben producer und consumer zuzuordnen 
-    // matchingEtus iterieren und wenn timestamp mit timestamp von bookingData übereinstimmt, dann prüfen ob Zähler ein consument oder Produzent ist
-    // wenn produzent, dann muss energy_consumed gleich oder höher von energy sein 
-    // wenn konsument, dann muss energy_consumed gleich oder höher von energy sein 
     let foundMatchingMeterData = []
 
     for (let i = 0; i < matchingETUs.length; i++) {
@@ -129,7 +129,7 @@ function calculateEnergyDifference(meterData, bookingData) {
                     {
                         "booking_id": bookingData[j].booking_id,
                         "mfa_id": bookingData[j]._id,
-                        "etus": matchingETUs[i]
+                        "etus": matchingETUs[i].etus
                     }
                 )
             }
