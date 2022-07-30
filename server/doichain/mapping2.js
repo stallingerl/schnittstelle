@@ -17,36 +17,38 @@ export async function mapping(docstore) {
             let endZeit = new Date(e.energy[e.energy.length - 1].date).getTime()
 
             // liegt die letzte Energiebuchung innerhalb der vorletzen Stunde
-            if (endZeit >= timeBeforeInterval && endZeit <= timeNow) {
-                bookingData.push(e)
-            }
+            //if (endZeit >= timeBeforeInterval && endZeit <= timeNow) {
+            bookingData.push(e)
+            //}
         }
     })
 
     // find all matching meterData for bookingData
     for (let i = 0; i < bookingData.length; i++) {
         let e = bookingData[i]
-        let consumerMeterId = (AES.decrypt(e.consumer, process.env.PASSWORD))
+
+        var consumerMeterId = (AES.decrypt(e.consumer, process.env.PASSWORD));
 
         let etus = []
         for (let i = 0; i < e.energy.length; i++) {
             let bookingTime0 = new Date(e.energy[i].date).getTime()
             let bookingTime1 = bookingTime0 + 900000
-            bookingObject.push({ [bookingTime0]: e.energy[i].kwh })
 
             // first find meterId for consumer at the beginning of booking data and meter data after 15mins.
-            let meterData0 = await docstore.query((doc) => doc.meter_id == consumerMeterId && doc.timestamp == bookingTime0)
-            let meterData1 = await docstore.query((doc) => doc.meter_id == consumerMeterId && doc.timestamp == bookingTime1)
+            let meterData0 = await docstore.query((doc) => doc.meterId !== undefined && AES.decrypt(doc.meterId, process.env.PASSWORD) == consumerMeterId && doc.timestamp == bookingTime0)
+            let meterData1 = await docstore.query((doc) => doc.meter_id !== undefined) //== consumerMeterId && doc.timestamp == bookingTime1)
 
             // calculate difference in meter data and compare to booked energy
-            let difference = meterData1.total_consumed - meterData0.total_consumed
-            if (difference > e.energy[i].kwh) {
-                var date = new Date(new Date(bookingTime0));
-                date = (date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + "T" + date.getHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
-                etus.push({
-                    "date": date,
-                    "energy": difference
-                })
+            if (meterData0 && meterData1) {
+                let difference = meterData1.total_consumed - meterData0.total_consumed
+                if (difference > e.energy[i].energy_kwh) {
+                    var date = new Date(bookingTime0);
+                    date = (date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + "T" + date.getHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
+                    etus.push({
+                        "date": date,
+                        "energy": difference
+                    })
+                }
             }
         }
 
