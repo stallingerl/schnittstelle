@@ -28,20 +28,7 @@ export async function sendReport(foundMatchingMeterdata) {
 
 async function postReport(foundMatchingMeterdata) {
     let resStatus
-    const body = {
-        "booking_id": "627bcf715cba23888483f879",
-        "mfa_id": "627bcf715cba23888483f878",
-        "etus": [
-            {
-                "date": "2022-05-12T00:00:00+00:00",
-                "energy": 10
-            },
-            {
-                "date": "2022-05-12T00:15:00+00:00",
-                "energy": 10
-            }
-        ]
-    }
+    const body = JSON.stringify(foundMatchingMeterdata[0])
 
     try {
         await axios({
@@ -51,21 +38,8 @@ async function postReport(foundMatchingMeterdata) {
             "Access-Control-Allow-Origin": "*",
             "Content-Type": "application/json",
             "Authorization": "Bearer " + s.token},
-            data: {
-                "booking_id": "627bcf715cba23888483f879",
-                "mfa_id": "627bcf715cba23888483f878",
-                "etus": [
-                    {
-                        "date": "2022-05-12T00:00:00+00:00",
-                        "energy": 10
-                    },
-                    {
-                        "date": "2022-05-12T00:15:00+00:00",
-                        "energy": 10
-                    }
-                ]
-            },
-            url: "https://backend.consolinno-test.nemospot.de/reports"
+            data: body,
+            url: "https://backend.consolinno-test.nemospot.de/reports/"
         }).then(res => {
                 if (res.status == 200) {
                     console.log("Successfully sent report")

@@ -1,29 +1,33 @@
-import { createHdKeyFromMnemonic, generateMnemonic, encryptAES, decryptAES } from 'doichainjs-lib';
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+import { generateMnemonic } from 'doichainjs-lib'
+import { createHdKeyFromMnemonic, encryptAES, decryptAES, network } from 'doichainjs-lib';
 import { s } from "./sharedState.js";
 import path from 'path'
 const __dirname = path.resolve('./');
-import fs from 'fs';
+var fs = require('fs');
 
+var password1
+s.password = password1 ? password1 : "mnemonic"
 
 export async function createOrReadSeed(id) {
-    s.password = "yourPassword"
     return new Promise((res, rej) => {
         let filename = `${__dirname}/encryptedS${id}.txt`
         try {
             if (fs.existsSync(filename)) {
-                console.log("Seed phrase exists")
+               // console.log("Seed phrase exists")
                 fs.readFile(filename, 'utf8', async function (err, data) {
                     s.seed = decryptAES(data, s.password)
                     // generate hd key 
                     s.hdkey = createHdKeyFromMnemonic(s.seed, s.password)
-                    console.log("Read Existing Seed from storage");
+                 //   console.log("Read Existing Seed from storage");
                     res()
                 });
-            } else {
+            }else{
                 throw err
             }
         } catch (err) {
-            console.log("No Seed yet. Creating new one")
+       //     console.log("No Seed yet. Creating new one")
 
             s.seed = generateMnemonic();
 
@@ -35,10 +39,9 @@ export async function createOrReadSeed(id) {
 
             fs.writeFile(filename, `${encryptedS}`, function (err) {
                 if (err) throw err;
-                console.log('Saved new encrypted seed phrase!');
+                //console.log('Saved new encrypted seed phrase!');
                 res()
             });
         }
     })
 }
-
