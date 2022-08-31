@@ -5,8 +5,13 @@ export async function mapping(docstore) {
     let foundMatchingMeterData = []
 
     // query meter data of now -30 mins because meterdata is sent every 15 mins + 15 mins buffer to receive and sync meterData in DB
+    let timeNow = new Date().getTime()
+    let timeBeforeInterval = timeNow - 3600000
+
+    /*
     let timeNow = 1660914900000 //new Date().getTime() 
     let timeBeforeInterval = 1660910400000 //timeNow - 3600000
+    */
 
     // find all booking data for last hour 
     let bookingData = []
@@ -25,83 +30,86 @@ export async function mapping(docstore) {
     // find all matching meterData for bookingData
     for (let i = 0; i < bookingData.length; i++) {
         let e = bookingData[i]
-        let decryptedHex = AES.decrypt(e.consumer, "NeverGuessing").toString();
+        let decryptedHex = AES.decrypt(e.consumer, process.env.PASSWORD).toString();
         let consumerMeterId = new Buffer(decryptedHex, "hex").toString()
-
+        
         let etus = []
 
-        if (e.energy.length == 2) {
-   
-            let bookingTime0 = new Date(e.energy[0].date).getTime()
-            let bookingTime1 = new Date(e.energy[1].date).getTime()
+        let lastETU = e.energy[e.energy.length - 1]
 
-            bookingTime0 = roundToNearest15Mins(bookingTime0)
-            bookingTime1 = roundToNearest15Mins(bookingTime1)
+        let bookingTime0 = new Date(e.energy[0].date).getTime()
+        let bookingTime1
 
-            // To Do: Round to nearest full 15 mins 
-
-            // first find meterId for consumer at the beginning of booking data and meter data after 15mins.
-            let meterData0
-            let meterData1
-
-            // find matching meterData for etus in Booking Data
-            await docstore.query((doc) => {
-                if (doc.meterId !== undefined) {
-                    let hex = AES.decrypt(doc.meterId, "NeverGuessing").toString();
-                    let decodedMeterId = new Buffer(decryptedHex, "hex").toString()
-                    let roundedDocTime = roundToNearest15Mins(doc.timestamp)
-                    if (decodedMeterId == consumerMeterId && roundedDocTime == bookingTime0) {
-                        meterData0 = doc
-                    }
-                    // to do: MeterData1 hat die Uhrzeit 14:15:01 -> eine Sekunde ist in der OrbitDB. Sekunden auf null setzen
-                    if (decodedMeterId == consumerMeterId && roundedDocTime == bookingTime1 ) {
-                        meterData1 = doc
-                    }
-                }
-            })
-
-
-            // calculate difference in meter data and compare to booked energy
-            let difference = meterData1.total_consumed - meterData0.total_consumed
-            if (difference > e.energy[0].energy_kwh) {
-                difference = Math.round(difference)
-                var date = new Date(new Date(bookingTime0));
-                date = (date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + "T" + date.getHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
-                etus.push({
-                    "date": date,
-                    "energy": difference
-                })
-            }
+        if (lastETU.energy_kwh > 0) {
+            // check for meter data 15 mins after the last booking data in ETU
+            bookingTime1 = new Date(lastETU.date).getTime() + 900000
         } else {
-            for (let i = 0; i < e.energy.length; i++) {
-                let bookingTime0 = new Date(e.energy[i].date).getTime()
-                let bookingTime1 = bookingTime0 + 900000
-
-
-                // first find meterId for consumer at the beginning of booking data and meter data after 15mins.
-                let meterData0 = await docstore.query((doc) => doc.meter_id == consumerMeterId && doc.timestamp == bookingTime0)
-                let meterData1 = await docstore.query((doc) => doc.meter_id == consumerMeterId && doc.timestamp == bookingTime1)
-
-                // calculate difference in meter data and compare to booked energy
-                let difference = meterData1.total_consumed - meterData0.total_consumed
-                if (difference > e.energy[i].kwh) {
-                    difference = Math.round(difference)
-                    var date = new Date(new Date(bookingTime0));
-                    date = (date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate() + "T" + date.getHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
-                    etus.push({
-                        "date": date,
-                        "energy": difference
-                    })
-                }
-            }
+            bookingTime1 = new Date(lastETU.date).getTime()
         }
 
-        if (etus.length > 0) {
+        bookingTime0 = roundToNearest15Mins(bookingTime0)
+        bookingTime1 = roundToNearest15Mins(bookingTime1)
+
+        // Gebuchter Energiebedarf
+        let totalBookedEnergy = 0
+        for (let i = 0; i < e.energy.length; i++) {
+            totalBookedEnergy += e.energy[i].energy_kwh
+        }
+
+        // first find meterId for consumer at the beginning of booking data and meter data after 15mins.
+        let meterData = []
+
+        // find matching meterData for etus in Booking Data
+        await docstore.query((doc) => {
+            if (doc.meterId !== undefined) {
+                let decryptedHex = AES.decrypt(doc.meterId, process.env.PASSWORD).toString();
+                let decodedMeterId = new Buffer(decryptedHex, "hex").toString()
+                let roundedDocTime = roundToNearest15Mins(doc.timestamp)
+                if ( decodedMeterId == consumerMeterId && roundedDocTime >= bookingTime0 && roundedDocTime <= bookingTime1) { 
+                    doc.timestamp = new Date(doc.timestamp)
+                    doc.meterId = decodedMeterId
+                    meterData.push(doc)
+                }
+            }
+        })
+
+        let total_consumed = 0
+        // add up consumed meter data
+        for (let i = 0; i < meterData.length; i++){
+            total_consumed += meterData[i].total_consumed
+        }
+
+
+        // calculate difference in meter data and compare to booked energy
+        let difference = total_consumed
+        if (difference > totalBookedEnergy) {
+            difference = Math.round(difference)
+            var date = new Date(new Date(bookingTime0));
+            date = (date.getFullYear() + "-" + ('0' + (date.getMonth() + 1)).slice(-2) + "-" + date.getDate() + "T" + date.getUTCHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
+            etus.push({
+                "date": date,
+                "energy": totalBookedEnergy
+            })
+
+            var date1 = new Date(new Date(bookingTime1))
+            date1 = (date1.getFullYear() + "-" + ('0' + (date1.getMonth() + 1)).slice(-2) + "-" + date1.getDate() + "T" + date1.getUTCHours().toString().padStart(2, '0') + ":" + (date1.getMinutes() < 10 ? '0' : '') + date1.getMinutes() + ":00");
+            etus.push({
+                "date": date1,
+                "energy": 0
+            })
+        }
+
+        if (etus.length > 1) {
             foundMatchingMeterData.push({
                 "booking_id": e.booking_id,
                 "mfa_id": e._id,
                 "etus": etus
             })
+            console.log("found matching meter data: ", foundMatchingMeterData)
+        } else {
+            console.log("Not consumed enough")
+            console.log("required: ", totalBookedEnergy)
+            console.log("consumed: ", total_consumed)
         }
     }
 

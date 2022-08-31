@@ -18,7 +18,7 @@ export async function sendReport(foundMatchingMeterdata) {
         resStatus = await postReport(foundMatchingMeterdata)
     }
 
-    if (resStatus == 200) {
+    if (resStatus == 201) {
         console.log("Sent report to EnergieDock")
     } else {
         console.log("couldn't send report to EnergieDock")
@@ -41,9 +41,9 @@ async function postReport(foundMatchingMeterdata) {
             data: body,
             url: "https://backend.consolinno-test.nemospot.de/reports/"
         }).then(res => {
-                if (res.status == 200) {
+                if (res.status == 201) {
                     console.log("Successfully sent report")
-                    resStatus = 200
+                    resStatus = 201
                     return resStatus
                 } else {
                     console.log(res.error)
