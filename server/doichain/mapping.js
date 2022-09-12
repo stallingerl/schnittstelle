@@ -1,3 +1,6 @@
+import { createRequire } from "module"; // Bring in the ability to create the 'require' method
+const require = createRequire(import.meta.url); // construct the require method
+const CryptoJS = require("crypto-js");
 import AES from 'crypto-js/aes.js'
 
 export async function mapping(docstore) {
@@ -5,8 +8,11 @@ export async function mapping(docstore) {
     let foundMatchingMeterData = []
 
     // query meter data of now -30 mins because meterdata is sent every 15 mins + 15 mins buffer to receive and sync meterData in DB
-    let timeNow = new Date().getTime()
-    let timeBeforeInterval = timeNow - 3600000
+    let timeNow = new Date().getTime()- 1800000
+    let timeBeforeInterval = timeNow - 1800000
+
+    console.log("timeNow: ", new Date(timeNow).toLocaleString())
+    console.log("timeBeforeIntervall: ", new Date(timeBeforeInterval).toLocaleString())
 
     /*
     let timeNow = 1660914900000 //new Date().getTime() 
@@ -27,18 +33,26 @@ export async function mapping(docstore) {
         }
     })
 
+    console.log("booking data: ", bookingData)
+
     // find all matching meterData for bookingData
     for (let i = 0; i < bookingData.length; i++) {
         let e = bookingData[i]
-        let decryptedHex = AES.decrypt(e.consumer, process.env.PASSWORD).toString();
-        let consumerMeterId = new Buffer(decryptedHex, "hex").toString()
-        
+        console.log(e)
+        console.log("e.consumer ", e.consumer)
+        let decryptedHex = CryptoJS.AES.decrypt(e.consumer, "NeverGuessing");
+        let consumerMeterId = decryptedHex.toString(CryptoJS.enc.Utf8)
+        console.log("consumerMeterId, ", consumerMeterId)
+
         let etus = []
 
         let lastETU = e.energy[e.energy.length - 1]
 
         let bookingTime0 = new Date(e.energy[0].date).getTime()
-        let bookingTime1
+        let bookingTime1 = new Date(e.energy[e.energy.length - 1].date).getTime()
+
+        console.log("bookingTime0 ", new Date(bookingTime0).toLocaleString())
+        console.log("bookingTime1 ", new Date(bookingTime1).toLocaleString())
 
         if (lastETU.energy_kwh > 0) {
             // check for meter data 15 mins after the last booking data in ETU
@@ -58,24 +72,36 @@ export async function mapping(docstore) {
 
         // first find meterId for consumer at the beginning of booking data and meter data after 15mins.
         let meterData = []
+        let blockChainIPFSProof = []
 
         // find matching meterData for etus in Booking Data
         await docstore.query((doc) => {
             if (doc.meterId !== undefined) {
-                let decryptedHex = AES.decrypt(doc.meterId, process.env.PASSWORD).toString();
-                let decodedMeterId = new Buffer(decryptedHex, "hex").toString()
+                let decryptedHex1 = AES.decrypt(doc.meterId, process.env.PASSWORD).toString();
+                let decodedMeterId1 = new Buffer(decryptedHex1, "hex").toString()
                 let roundedDocTime = roundToNearest15Mins(doc.timestamp)
-                if ( decodedMeterId == consumerMeterId && roundedDocTime >= bookingTime0 && roundedDocTime <= bookingTime1) { 
+                if (decodedMeterId1 == consumerMeterId && roundedDocTime >= bookingTime0 && roundedDocTime <= bookingTime1) {
                     doc.timestamp = new Date(doc.timestamp)
-                    doc.meterId = decodedMeterId
+                    doc.meterId = decodedMeterId1
                     meterData.push(doc)
+                    if (doc.hash !== undefined && doc.cidList !== undefined) {
+                        blockChainIPFSProof.push({
+                            "timestamp": doc.timestamp.getTime(),
+                            "meterId": doc.meterId,
+                            "doichain_hash": doc.hash,
+                            "cidList": doc.cidList,
+                            "cid": doc._id
+                        })
+                    }
                 }
             }
         })
 
+        console.log("meter data: ", meterData)
+
         let total_consumed = 0
         // add up consumed meter data
-        for (let i = 0; i < meterData.length; i++){
+        for (let i = 0; i < meterData.length; i++) {
             total_consumed += meterData[i].total_consumed
         }
 
@@ -85,14 +111,14 @@ export async function mapping(docstore) {
         if (difference > totalBookedEnergy) {
             difference = Math.round(difference)
             var date = new Date(new Date(bookingTime0));
-            date = (date.getFullYear() + "-" + ('0' + (date.getMonth() + 1)).slice(-2) + "-" + date.getDate() + "T" + date.getUTCHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
+            date = (date.getFullYear() + "-" + ('0' + (date.getMonth() + 1)).slice(-2) + "-" + ('0' + (date.getDate() + 1)).slice(-2)  + "T" + date.getUTCHours().toString().padStart(2, '0') + ":" + (date.getMinutes() < 10 ? '0' : '') + date.getMinutes() + ":00");
             etus.push({
                 "date": date,
                 "energy": totalBookedEnergy
             })
 
-            var date1 = new Date(new Date(bookingTime1))
-            date1 = (date1.getFullYear() + "-" + ('0' + (date1.getMonth() + 1)).slice(-2) + "-" + date1.getDate() + "T" + date1.getUTCHours().toString().padStart(2, '0') + ":" + (date1.getMinutes() < 10 ? '0' : '') + date1.getMinutes() + ":00");
+            var date1 = new Date(new Date(bookingTime0 + 900000))
+            date1 = (date1.getFullYear() + "-" + ('0' + (date1.getMonth() + 1)).slice(-2) + "-" + ('0' + (date1.getDate() + 1)).slice(-2)  + "T" + date1.getUTCHours().toString().padStart(2, '0') + ":" + (date1.getMinutes() < 10 ? '0' : '') + date1.getMinutes() + ":00");
             etus.push({
                 "date": date1,
                 "energy": 0
@@ -103,15 +129,16 @@ export async function mapping(docstore) {
             foundMatchingMeterData.push({
                 "booking_id": e.booking_id,
                 "mfa_id": e._id,
-                "etus": etus
+                "etus": etus,
+                "blockchainProof": blockChainIPFSProof
             })
-            console.log("found matching meter data: ", foundMatchingMeterData)
         } else {
             console.log("Not consumed enough")
             console.log("required: ", totalBookedEnergy)
             console.log("consumed: ", total_consumed)
         }
     }
+    console.log("matching Meter Data: ", foundMatchingMeterData)
 
     return foundMatchingMeterData
 }

@@ -8,6 +8,7 @@ const bootstrapers = [
   '/ip4/192.168.1.135/tcp/4002/p2p/QmW39JmvxEDf1MdYkwuwns7XgMF9AwR3oM7tSAgEDxFtbX',
   '/ip4/162.55.163.122/tcp/4002/p2p/12D3KooWQ3AzcSTPSo9ffXRn2yGYWiJnadEMCiR4ChPdHj4U1mxt',
   '/ip4/49.12.243.137/tcp/4002/p2p/12D3KooWMRpvNCwojPnzEcNwyXHwB7a9cQCXoe4dPUyvFXqD74CL',
+  '/ip4/162.55.163.122/tcp/4002/p2p/12D3KooWQVP7oVspBU3y7ALgbsPAdrx5qTsRSkEakdjMDY2nJ9JB',
   '/dnsaddr/bootstrap.libp2p.io/p2p/QmW39JmvxEDf1MdYkwuwns7XgMF9AwR3oM7tSAgEDxFtbX'
 ]
 

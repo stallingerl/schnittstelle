@@ -116,13 +116,22 @@ async function main() {
   //let foundMatchingMeterData = await mapping(docstore)
   // await sendReport(foundMatchingMeterData)
 
-  // Check for reportable meter data every hour
+  console.log("mapping at: ", new Date().toLocaleString())
+  let foundMatchingMeterData = await mapping(docstore)
+  if (foundMatchingMeterData.length > 0) {
+    await sendReport(foundMatchingMeterData)
+  }
+
+  // Check for reportable meter data every half hour
+
   setInterval(async () => {
+    console.log("mapping at: ", new Date().toLocaleString())
     let foundMatchingMeterData = await mapping(docstore)
     if (foundMatchingMeterData.length > 0) {
       await sendReport(foundMatchingMeterData)
     }
-  }, 3600000)
+  }, 1800000)
+
 
 
 }

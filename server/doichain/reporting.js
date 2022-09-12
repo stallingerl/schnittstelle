@@ -29,6 +29,7 @@ export async function sendReport(foundMatchingMeterdata) {
 async function postReport(foundMatchingMeterdata) {
     let resStatus
     const body = JSON.stringify(foundMatchingMeterdata[0])
+    console.log("Body des Reports: ", body)
 
     try {
         await axios({

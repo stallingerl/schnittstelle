@@ -88,6 +88,16 @@ app.post("/trade", auth, async (req, res) => {
                 "doi_hash": hash
             });
 
+            console.log("OrbitData: ", {
+                "producer": producer,
+                "consumer": consumer,
+                "energy": energy,
+                "_id": mfa_id,
+                "booking_id": booking_id,
+                "cid": cid,
+                "doi_hash": hash
+            })
+
             console.log("Successfully saved: ", mfa_id)
             // return ok
             res.status(200).send(mfa_id)
