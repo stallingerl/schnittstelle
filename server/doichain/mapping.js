@@ -96,6 +96,7 @@ export async function mapping(docstore) {
                 }
             }
         })
+        console.log("BlockChain Proof: ", JSON.stringify(blockChainIPFSProof))
 
         console.log("meter data: ", meterData)
 
@@ -129,8 +130,7 @@ export async function mapping(docstore) {
             foundMatchingMeterData.push({
                 "booking_id": e.booking_id,
                 "mfa_id": e._id,
-                "etus": etus,
-                "blockchainProof": blockChainIPFSProof
+                "etus": etus
             })
         } else {
             console.log("Not consumed enough")

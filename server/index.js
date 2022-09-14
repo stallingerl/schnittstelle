@@ -11,6 +11,7 @@ import ElectrumClient from "@codewarriorr/electrum-client-js"
 import bootstrapers from './config/bootstrapers.js'
 import { mapping } from "./doichain/mapping.js"
 import { sendReport } from "./doichain/reporting.js"
+import { servers } from "./doichain/backupServers.js"
 
 async function main() {
 
@@ -52,6 +53,7 @@ async function main() {
   s.account = 0
   s.basePath = `${s.purpose}/${s.coinType}/${s.account}`
 
+
   global.client = new ElectrumClient(process.env.ELECTRUM_CLIENT, 50002, "ssl");
   try {
     await global.client.connect(
@@ -60,6 +62,23 @@ async function main() {
     )
   } catch (err) {
     console.error(err);
+    // if connection error try other servers 
+      for (let i = 0; i < servers.length; i++) {
+        electrumHost = servers[i].MAINNET
+        global.client = new ElectrumClient(electrumHost, 50002, "ssl");
+        try {
+          await global.client.connect(
+            "electrum-client-js", // optional client name
+            "1.4.2" // optional protocol version
+          )
+          i = servers.length
+        } catch (error) {
+          if (i == (servers.length - 1)) {
+            // try connection again with server list from the beginning
+            i = 0
+          }
+        }
+      }
   }
 
   await createOrReadSeed(s.id)
